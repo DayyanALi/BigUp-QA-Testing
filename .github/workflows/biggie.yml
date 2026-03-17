@@ -15,12 +15,11 @@ jobs:
     - name: Write auth state
       env:
         AUTH_STATE: ${{ secrets.AUTH_STATE }}
+      run: python3 -c "import os; open('config.json', 'w').write(os.environ['AUTH_STATE'])"
+    - name: Verify auth state
       run: |
-        echo "$AUTH_STATE" > config.json
-        if [ ! -s config.json ]; then
-          echo "Error: config.json is empty. Please check if AUTH_STATE secret is correctly set in GitHub Settings."
-          exit 1
-        fi
+        echo "File size: $(wc -c < config.json) bytes"
+        python3 -c "import json; json.load(open('config.json')); print('JSON is valid')"
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
     - name: Run Biggie tests
