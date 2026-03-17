@@ -15,8 +15,14 @@ jobs:
     - name: Install dependencies
       run: npm ci
     - name: Write auth state
+      env:
+        AUTH_STATE: ${{ secrets.AUTH_STATE }}
       run: |
-        echo '${{ secrets.AUTH_STATE }}' > config.json
+        echo "$AUTH_STATE" > config.json
+        if [ ! -s config.json ]; then
+          echo "Error: config.json is empty. Please check if AUTH_STATE secret is correctly set in GitHub Settings."
+          exit 1
+        fi
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
     - name: Run Stream tests
