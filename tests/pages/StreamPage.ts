@@ -194,4 +194,20 @@ export class StreamPage {
       vid.pause();
     });
   }
+
+  async switchTab(tabName: 'overview' | 'game' | 'chat') {
+    let tab: Locator;
+    switch (tabName) {
+      case 'overview': tab = this.overviewTab; break;
+      case 'game': tab = this.gameTab; break;
+      case 'chat': tab = this.chatTab; break;
+      default: return;
+    }
+
+    if (await tab.isVisible()) {
+      // Use JS-based click to bypass interception by layout overlays (e.g. landscape mode)
+      await tab.evaluate((el: HTMLElement) => el.click());
+      await this.page.waitForTimeout(1000);
+    }
+  }
 }

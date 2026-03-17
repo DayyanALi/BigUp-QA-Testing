@@ -110,16 +110,16 @@ test.describe('Stream Replay Functionality', () => {
 
     // Switch tabs
     if (await streamPage.chatTab.isVisible()) {
-      await streamPage.chatTab.click();
+      await streamPage.switchTab('chat');
     } else if (await streamPage.gameTab.isVisible()) {
-      await streamPage.gameTab.click();
+      await streamPage.switchTab('game');
     }
 
     await page.waitForTimeout(2000);
 
     // Switch back
     if (await streamPage.overviewTab.isVisible()) {
-      await streamPage.overviewTab.click();
+      await streamPage.switchTab('overview');
     }
 
     // Verify the replay continued playing (time has progressed)
