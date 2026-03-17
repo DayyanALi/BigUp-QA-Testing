@@ -1,0 +1,23 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Exclude PDF and TXT files as per user request
+*.pdf
+*.txt
+
+# Secrets and local config
+config.json
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
