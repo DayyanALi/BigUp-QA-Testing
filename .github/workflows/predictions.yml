@@ -1,9 +1,6 @@
-name: Playwright Tests
+name: Predictions Tests
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
 jobs:
   test:
     timeout-minutes: 60
@@ -17,11 +14,11 @@ jobs:
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
+    - name: Run Predictions tests
+      run: npx playwright test tests/predictions.spec.ts --workers=1
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
-        name: playwright-report
+        name: playwright-report-predictions
         path: playwright-report/
         retention-days: 30
