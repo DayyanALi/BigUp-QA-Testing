@@ -35,7 +35,14 @@ test.describe('Predictions Functionality', () => {
     }
     
     // 3. Submit prediction using the new flow ($6, Power Play, Play)
-    await activityPage.submitPredictionFlow('$6');
+    try {
+      await activityPage.submitPredictionFlow('$6');
+    } catch (e: any) {
+      if (e.message?.includes('PREDICTION_CLOSED')) {
+        test.skip(true, 'Skipping: Match entries closed during execution.');
+      }
+      throw e;
+    }
   });
 
   test('TC-PRED-002: Make all 6 predictions and submit, then verify tab switching', async ({ page }) => {
@@ -56,7 +63,14 @@ test.describe('Predictions Functionality', () => {
     }
     
     // 4. Submit the prediction
-    await activityPage.submitPredictionFlow('$6');
+    try {
+      await activityPage.submitPredictionFlow('$6');
+    } catch (e: any) {
+      if (e.message?.includes('PREDICTION_CLOSED')) {
+        test.skip(true, 'Skipping: Match entries closed during execution.');
+      }
+      throw e;
+    }
   });
 
   test('TC-PRED-003: Navigation Integrity (Home <-> Activity)', async ({ page }) => {
@@ -94,7 +108,14 @@ test.describe('Predictions Functionality', () => {
     await homePage.quickPredict(firstCard, 'No', 0); // After first pick, next question becomes index 0
     
     // 3. Submit prediction
-    await activityPage.submitPredictionFlow('$6');
+    try {
+      await activityPage.submitPredictionFlow('$6');
+    } catch (e: any) {
+      if (e.message?.includes('PREDICTION_CLOSED')) {
+        test.skip(true, 'Skipping: Match entries closed during execution.');
+      }
+      throw e;
+    }
   });
 
   test('TC-PRED-005: Dismissing Home Feed Predictions (Skip)', async ({ page }) => {
@@ -107,7 +128,8 @@ test.describe('Predictions Functionality', () => {
     console.log(`Found ${cardsCount} prediction cards. Skipping ${limit}.`);
     
     for (let i = 0; i < limit; i++) {
-       const card = homePage.predictionGameCards.nth(i);
+       // Use first() because skipping a card usually removes it from the current "active" collection
+       const card = homePage.predictionGameCards.first();
        await card.scrollIntoViewIfNeeded();
        await homePage.quickPredict(card, 'Skip');
        await page.waitForTimeout(1000); // Wait for transition

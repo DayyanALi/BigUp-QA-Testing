@@ -144,36 +144,40 @@ export class ActivityPage {
    * 4. Click final 'Play'
    */
   async submitPredictionFlow(amount: string = '$6') {
-    console.log('Clicking submit entry button...');
-    await this.submitEntryButton.click({ force: true });
+    console.log('Clicking submit entry button via JS...');
+    await this.submitEntryButton.evaluate(el => (el as HTMLElement).click());
     
-    // Check for "Entries closed" toast with reduced sensitivity to exact wording
-    // We look for parts of the common error message
     const errorToast = this.page.locator('div, span, p').filter({ hasText: /Entries (has )?been closed/i });
     
-    // Use a slightly longer wait for the toast to appear if the network is slow
-    const isClosed = await errorToast.isVisible({ timeout: 4000 }).catch(() => false);
-    
-    if (isClosed) {
-      const msg = await errorToast.innerText();
-      console.error(`PREDICTION LOCKOUT DETECTED: ${msg}`);
-      throw new Error(`PREDICTION_CLOSED: ${msg}`);
-    }
+    // Helper to check for lockout and throw
+    const checkForLockout = async (logMsg: string) => {
+      if (await errorToast.isVisible({ timeout: 1000 }).catch(() => false)) {
+        const msg = await errorToast.innerText();
+        console.error(`PREDICTION LOCKOUT DETECTED (${logMsg}): ${msg}`);
+        throw new Error(`PREDICTION_CLOSED: ${msg}`);
+      }
+    };
+
+    // Check immediately
+    await checkForLockout('Initial check');
     
     console.log('Proceeding to amount selection and Power Play...');
     
     // Wait for the drawer/slip to be fully visible and stable
     await this.page.waitForTimeout(2000); 
     
+    // Check again after wait
+    await checkForLockout('Post-wait check');
+    
     // Amount selection is optional as it's not always required by the UI
     const amountBtn = this.page.getByRole('button', { name: amount, exact: true });
-    if (await amountBtn.isVisible({ timeout: 5000 })) {
+    if (await amountBtn.isVisible({ timeout: 2000 })) {
       console.log(`Selecting amount: ${amount}`);
       await amountBtn.click({ force: true });
     }
     
     // Power Play/Flex Play might be pre-selected or missing depending on pick count
-    if (await this.powerPlayButton.isVisible({ timeout: 5000 })) {
+    if (await this.powerPlayButton.isVisible({ timeout: 2000 })) {
       console.log('Clicking Power Play...');
       await this.powerPlayButton.click({ force: true });
     } else {
