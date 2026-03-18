@@ -18,88 +18,56 @@ test.describe('Predictions Functionality', () => {
   });
 
   test('TC-PRED-001: Enter predictions from Activity Page', async ({ page }) => {
-    const maxMatchAttempts = 3;
-    let success = false;
+    const gameCard = homePage.predictionGameCards.first();
+    await expect(gameCard).toBeVisible({ timeout: 15000 });
     
-    for (let attempt = 0; attempt < maxMatchAttempts; attempt++) {
-      console.log(`TC-PRED-001: Match Attempt #${attempt + 1}`);
-      const gameCard = homePage.predictionGameCards.nth(attempt);
+    try {
+      // 1. Navigate to activity page
+      await homePage.goToActivityPage(gameCard);
       
-      if (!await gameCard.isVisible().catch(() => false)) {
-        console.log('No more prediction cards available.');
-        break;
+      // 2. Select predictions
+      await activityPage.waitForCards();
+      const cardCount = await activityPage.predictionCards.count();
+      const limit = Math.min(cardCount, 3);
+      
+      for (let i = 0; i < limit; i++) {
+        const choice = i % 2 === 0 ? 'Yes' : 'No';
+        await activityPage.selectPredictionOnCard(i, choice);
       }
       
-      try {
-        // 1. Navigate to activity page
-        await homePage.goToActivityPage(gameCard);
-        
-        // 2. Select predictions
-        await activityPage.waitForCards();
-        const cardCount = await activityPage.predictionCards.count();
-        const limit = Math.min(cardCount, 3);
-        
-        for (let i = 0; i < limit; i++) {
-          const choice = i % 2 === 0 ? 'Yes' : 'No';
-          await activityPage.selectPredictionOnCard(i, choice);
-        }
-        
-        // 3. Submit prediction
-        await activityPage.submitPredictionFlow('$6');
-        success = true;
-        break; // Exit loop on success
-      } catch (e: any) {
-        console.log(`TC-PRED-001 Attempt ${attempt + 1} Failed: ${e.message}`);
-        if (e.message?.includes('PREDICTION_CLOSED')) {
-          console.log('Match locked out. Falling back to next card...');
-          await homePage.navigate(); // Return to home to try next card
-          continue;
-        }
-        throw e; // Reroute fatal errors
+      // 3. Submit prediction
+      await activityPage.submitPredictionFlow('$6');
+    } catch (e: any) {
+      console.log(`TC-PRED-001 Failed: ${e.message}`);
+      if (e.message?.includes('PREDICTION_CLOSED')) {
+        test.skip(true, 'Skipping: Match entries closed during execution.');
       }
-    }
-    
-    if (!success) {
-      test.skip(true, 'Skipping: All attempted matches were locked out.');
+      throw e;
     }
   });
 
   test('TC-PRED-002: Make all 6 predictions and submit, then verify tab switching', async ({ page }) => {
-    const maxMatchAttempts = 2; // Large entries tests are slow, try up to 2
-    let success = false;
+    const gameCard = homePage.predictionGameCards.first();
+    await expect(gameCard).toBeVisible({ timeout: 15000 });
     
-    for (let attempt = 0; attempt < maxMatchAttempts; attempt++) {
-      console.log(`TC-PRED-002: Match Attempt #${attempt + 1}`);
-      const gameCard = homePage.predictionGameCards.nth(attempt);
+    try {
+      await homePage.goToActivityPage(gameCard);
+      await activityPage.waitForCards();
       
-      if (!await gameCard.isVisible().catch(() => false)) break;
-      
-      try {
-        await homePage.goToActivityPage(gameCard);
-        await activityPage.waitForCards();
-        
-        const cardCount = await activityPage.predictionCards.count();
-        const limit = Math.min(cardCount, 6);
-        for (let i = 0; i < limit; i++) {
-          const choice = i % 2 === 0 ? 'Yes' : 'No';
-          await activityPage.selectPredictionOnCard(i, choice);
-        }
-        
-        await activityPage.submitPredictionFlow('$6');
-        success = true;
-        break;
-      } catch (e: any) {
-        console.log(`TC-PRED-002 Attempt ${attempt + 1} Failed: ${e.message}`);
-        if (e.message?.includes('PREDICTION_CLOSED')) {
-          await homePage.navigate();
-          continue;
-        }
-        throw e;
+      const cardCount = await activityPage.predictionCards.count();
+      const limit = Math.min(cardCount, 6);
+      for (let i = 0; i < limit; i++) {
+        const choice = i % 2 === 0 ? 'Yes' : 'No';
+        await activityPage.selectPredictionOnCard(i, choice);
       }
-    }
-    
-    if (!success) {
-      test.skip(true, 'Skipping: All attempted matches were locked out.');
+      
+      await activityPage.submitPredictionFlow('$6');
+    } catch (e: any) {
+      console.log(`TC-PRED-002 Failed: ${e.message}`);
+      if (e.message?.includes('PREDICTION_CLOSED')) {
+        test.skip(true, 'Skipping: Match entries closed during execution.');
+      }
+      throw e;
     }
   });
 
@@ -126,42 +94,27 @@ test.describe('Predictions Functionality', () => {
   });
 
   test('TC-PRED-004: Enter predictions from Homepage Feed', async ({ page }) => {
-    const maxMatchAttempts = 3;
-    let success = false;
+    const card = homePage.predictionGameCards.first();
+    await expect(card).toBeVisible({ timeout: 15000 });
     
-    for (let attempt = 0; attempt < maxMatchAttempts; attempt++) {
-      console.log(`TC-PRED-004: Feed Match Attempt #${attempt + 1}`);
-      const card = homePage.predictionGameCards.nth(attempt);
+    try {
+      await card.scrollIntoViewIfNeeded();
       
-      if (!await card.isVisible().catch(() => false)) break;
+      // Predict directly on the feed
+      await homePage.quickPredict(card, 'Yes', 0);
+      await page.waitForTimeout(1000);
+      await homePage.quickPredict(card, 'No', 0);
+      await page.waitForTimeout(1000);
+      await homePage.quickPredict(card, 'Yes', 0); // 3 picks
       
-      try {
-        await card.scrollIntoViewIfNeeded();
-        
-        // Predict directly on the feed
-        // Use index 0 for each question as they usually rotate
-        await homePage.quickPredict(card, 'Yes', 0);
-        await page.waitForTimeout(1000);
-        await homePage.quickPredict(card, 'No', 0);
-        await page.waitForTimeout(1000);
-        await homePage.quickPredict(card, 'Yes', 0); // 3 picks
-        
-        // Submit
-        await activityPage.submitPredictionFlow('$6');
-        success = true;
-        break;
-      } catch (e: any) {
-        console.log(`TC-PRED-004 Attempt ${attempt + 1} Failed: ${e.message}`);
-        if (e.message?.includes('PREDICTION_CLOSED')) {
-          // No need to navigate home, we are already there
-          continue;
-        }
-        throw e;
+      // Submit
+      await activityPage.submitPredictionFlow('$6');
+    } catch (e: any) {
+      console.log(`TC-PRED-004 Failed: ${e.message}`);
+      if (e.message?.includes('PREDICTION_CLOSED')) {
+        test.skip(true, 'Skipping: Match entries closed during execution.');
       }
-    }
-    
-    if (!success) {
-      test.skip(true, 'Skipping: All attempted feed matches were locked out.');
+      throw e;
     }
   });
 
