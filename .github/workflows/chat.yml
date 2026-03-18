@@ -3,9 +3,14 @@ on:
   workflow_dispatch:
 jobs:
   test:
+    name: ${{ matrix.test_case }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     environment: AUTH_STATE
+    strategy:
+      fail-fast: false
+      matrix:
+        test_case: [TC-CHAT-001, TC-CHAT-004, TC-CHAT-007]
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -31,11 +36,11 @@ jobs:
         python3 -c "import json; json.load(open('config.json')); print('JSON is valid')"
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Chat tests
-      run: npx playwright test tests/chat.spec.ts --workers=1
+    - name: Run Chat test
+      run: npx playwright test tests/chat.spec.ts -g "${{ matrix.test_case }}" --workers=1
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
-        name: playwright-report-chat
+        name: playwright-report-${{ matrix.test_case }}
         path: playwright-report/
         retention-days: 30
