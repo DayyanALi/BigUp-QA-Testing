@@ -22,9 +22,10 @@ export class BiggiePage {
     
     // Send button
     this.sendButton = this.page.getByRole('button', { name: /send/i })
+      .or(this.page.locator('button:has(path[d*="M5.91494 1.25V12.75"])'))
       .or(this.page.locator('[aria-label*="Send" i]'))
       .or(this.page.locator('button[type="submit"]'))
-      .or(this.page.locator('button:has(svg)').last());
+      .or(this.page.locator('button:has(svg)').last())
     
     // AI Responses
     // Given the UI shows Biggie responding, we search for the response wrapper by looking for the Biggie avatar/header,
