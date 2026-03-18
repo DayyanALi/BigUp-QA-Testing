@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { BiggiePage } from './pages/BiggiePage';
 import { ChatPage } from './pages/ChatPage'; // Used for the community chat integration test
 
-test.describe('Biggie AI Functionality', () => {
+test.describe.serial('Biggie AI Functionality', () => {
   let biggiePage: BiggiePage;
 
   test.beforeEach(async ({ page }) => {

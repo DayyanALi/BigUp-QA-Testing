@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { HomePage } from './pages/HomePage';
 import { ActivityPage } from './pages/ActivityPage';
 
-test.describe('Predictions Functionality', () => {
+test.describe.serial('Predictions Functionality', () => {
   let homePage: HomePage;
   let activityPage: ActivityPage;
 
