@@ -47,11 +47,9 @@ export class ActivityPage {
     // Submission buttons
     this.submitEntryButton = this.page.getByRole('button', { name: /Submit entry/i });
     // The final button in the drawer (can be 'Play', 'Submit', 'Enter', etc.)
-    this.playButton = this.page.locator('div[class*="slipper"], div[class*="drawer"], [role="dialog"]')
-      .locator('button')
-      .filter({ hasNotText: /Flex|Power/i })
-      .last();
-    this.confirmationButton = this.page.getByRole('button', { name: /BigBucks paid entry/i });
+    // We use a broader locator because the container class (drawer/slipper/dialog) can vary by browser/viewport
+    this.playButton = this.page.getByRole('button', { name: /Play|Submit|Enter/i, exact: true }).last();
+    this.confirmationButton = this.page.getByRole('button', { name: /BigBucks paid entry|Pay|Play|Confirm/i }).last();
   }
 
   /**
@@ -149,35 +147,31 @@ export class ActivityPage {
     
     const errorToast = this.page.locator('div, span, p').filter({ hasText: /Entries (has )?been closed/i });
     
-    // Helper to check for lockout and throw
-    const checkForLockout = async (logMsg: string) => {
+    // Wait for the drawer/slip to be fully visible and stable
+    // This is the source of truth for whether we can proceed
+    const drawerVisible = await this.page.locator('div, span, p, h1, h2, h3').filter({ hasText: /Select entry amount/i }).last().isVisible({ timeout: 5000 }).catch(() => false);
+    
+    if (!drawerVisible) {
+      // If drawer didn't open, check if it was because of a lockout
       if (await errorToast.isVisible({ timeout: 1000 }).catch(() => false)) {
         const msg = await errorToast.innerText();
-        console.error(`PREDICTION LOCKOUT DETECTED (${logMsg}): ${msg}`);
+        console.error(`PREDICTION LOCKOUT CONFIRMED: ${msg}`);
         throw new Error(`PREDICTION_CLOSED: ${msg}`);
       }
-    };
-
-    // Check immediately
-    await checkForLockout('Initial check');
-    
-    console.log('Proceeding to amount selection and Power Play...');
-    
-    // Wait for the drawer/slip to be fully visible and stable
-    await this.page.waitForTimeout(2000); 
-    
-    // Check again after wait
-    await checkForLockout('Post-wait check');
+      console.log('Prediction drawer did not appear, but no lockout toast found. Proceeding with caution...');
+    } else {
+      console.log('Prediction drawer appeared successfully.');
+    }
     
     // Amount selection is optional as it's not always required by the UI
-    const amountBtn = this.page.getByRole('button', { name: amount, exact: true });
-    if (await amountBtn.isVisible({ timeout: 2000 })) {
+    const amountBtn = this.page.getByRole('button', { name: amount });
+    if (await amountBtn.isVisible({ timeout: 5000 })) {
       console.log(`Selecting amount: ${amount}`);
       await amountBtn.click({ force: true });
     }
     
     // Power Play/Flex Play might be pre-selected or missing depending on pick count
-    if (await this.powerPlayButton.isVisible({ timeout: 2000 })) {
+    if (await this.powerPlayButton.isVisible({ timeout: 5000 })) {
       console.log('Clicking Power Play...');
       await this.powerPlayButton.click({ force: true });
     } else {
@@ -185,6 +179,7 @@ export class ActivityPage {
     }
     
     console.log('Clicking final Play button via JS...');
+    await expect(this.playButton).toBeEnabled({ timeout: 10000 });
     await this.playButton.evaluate(el => (el as HTMLElement).click());
     
     // Final confirmation if a "Paid Entry" modal appears
