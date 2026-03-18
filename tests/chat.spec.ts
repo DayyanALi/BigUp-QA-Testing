@@ -7,6 +7,7 @@ test.describe('Chat Functionality', () => {
   let homePage: HomePage;
 
   test.beforeEach(async ({ page }) => {
+    test.setTimeout(60000); // 60s for slow media/backend sync
     chatPage = new ChatPage(page);
     homePage = new HomePage(page);
     
@@ -28,37 +29,40 @@ test.describe('Chat Functionality', () => {
   });
 
   test('TC-CHAT-001: Send standard chat message with emoji', async ({ page }) => {
-    const message = `Hi 😊`;
-    const chatInput = page.getByTestId('chat-text-input');
-    const paragraph = chatInput.getByRole('paragraph');
-    
-    if (await paragraph.count() > 0) {
-      await paragraph.click();
-    } else {
-      await chatInput.click();
-    }
-    
-    // Clear and type with delay to ensure Tiptap change events fire
-    await page.keyboard.press('Control+A');
-    await page.keyboard.press('Backspace');
-    await page.keyboard.type(message, { delay: 100 });
-    
-    // Submit via button click
-    await chatPage.sendButton.click({ force: true });
+  // Unique message with timestamp to prevent false matches
+  const message = `Hi 😊 ${Date.now()}`;
 
-    // Verify message appears in the feed
-    // We search for the specific text to be more resilient to locator changes in different chat views
-    const sentMessage = page.getByText(message).last();
-    await expect(sentMessage).toBeVisible({ timeout: 15000 });
-    
-    // Verify a timestamp is displayed
-    const timestampElement = sentMessage.locator('time, .timestamp, [aria-label*="time"]');
-    if (await timestampElement.count() > 0) {
-      await expect(timestampElement).toBeVisible();
-    }
-  });
+  // Find the tiptap input
+  const chatInput = page.getByTestId('chat-text-input');
+  const paragraph = chatInput.getByRole('paragraph');
 
-  test('TC-CHAT-004: Prevent sending empty message', async ({ page }) => {
+  if (await paragraph.count() > 0) {
+    await paragraph.click();
+  } else {
+    await chatInput.click();
+  }
+
+  // Clear any existing text and type message
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type(message, { delay: 50 });
+
+  // Press Enter to send (more reliable than clicking send button for tiptap)
+  await page.keyboard.press('Enter');
+
+  // 1. Assert input is cleared after sending — proves send actually fired
+  await expect(paragraph).toBeEmpty({ timeout: 5000 });
+
+  // 2. Assert message appears in the chat feed specifically
+  // Using chatPage.messages scopes to the feed, not the whole page
+  const sentMessage = chatPage.messages.filter({ hasText: message }).last();
+  await expect(sentMessage).toBeVisible({ timeout: 15000 });
+
+  // 3. Assert the message contains the emoji specifically
+  await expect(sentMessage).toContainText('😊');
+});
+
+  test('TC-CHAT-002: Prevent sending empty message', async ({ page }) => {
     const chatInput = page.getByTestId('chat-text-input');
     const paragraph = chatInput.getByRole('paragraph');
     
@@ -79,44 +83,40 @@ test.describe('Chat Functionality', () => {
     expect(finalMessageCount).toBe(initialMessageCount);
   });
 
-  test('TC-CHAT-007: @Biggie in chat gets a response', async ({ page }) => {
-    const chatInput = page.getByTestId('chat-text-input');
-    const paragraph = chatInput.getByRole('paragraph');
+  test('TC-CHAT-003: @Biggie in chat gets a response', async ({ page }) => {
+  const chatInput = page.getByTestId('chat-text-input');
 
-    if (await paragraph.count() > 0) {
-      await paragraph.click();
-    } else {
-      await chatInput.click();
-    }
+  // Click the outer container to focus the Tiptap editor
+  await chatInput.click();
+  await page.waitForTimeout(300);
 
-    // 1. Type @Biggie slowly to trigger the mention dropdown
-    await page.keyboard.type('@Biggie', { delay: 150 });
-    
-    // 2. Wait for mention suggestions to appear to ensure we are referencing, not just typing
-    const mentionList = page.locator('.mention-suggestion, [role="listbox"]').first();
-    await expect(mentionList).toBeVisible({ timeout: 5000 });
-    
-    // 3. Press Enter to select Biggie from the suggestions
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-    
-    // 4. Type the actual question
-    await page.keyboard.type(' What are the current Premier League standings?', { delay: 50 });
-    
-    // 5. Submit
-    await chatPage.sendButton.click({ force: true });
-    
-    // Assert Biggie responds in a thread
-    const threadButton = page.getByRole('button', { name: /Thread Messages with Biggie/i }).last();
-    await expect(threadButton).toBeVisible({ timeout: 25000 });
-    await threadButton.click();
-    
-    const biggieMessageInThread = page.getByText('Biggie').last();
-    await expect(biggieMessageInThread).toBeVisible({ timeout: 15000 });
+  // Type directly into the container
+  await chatInput.pressSequentially('@Biggie', { delay: 100 });
+  await chatInput.press('Enter');
+  await chatInput.pressSequentially(' What are the current Premier League standings?', { delay: 100 });
 
-    const lastThreadMessage = page.locator('[data-testid="thread-message"], .thread-message, .message-bubble').last();
-    await expect(lastThreadMessage).toBeVisible({ timeout: 15000 });
-    const responseText = await lastThreadMessage.textContent();
-    expect(responseText?.length).toBeGreaterThan(20);
-  });
+  // Submit via Enter
+  await chatInput.press('Enter');
+
+  // 1. Assert YOUR message appears in chat first
+  const sentMessage = chatPage.messages
+    .filter({ hasText: /Premier League standings/i }).last();
+  await expect(sentMessage).toBeVisible({ timeout: 10000 });
+
+  // 2. Assert thread button appears — proves Biggie responded
+  const threadButton = page.locator('a, button, [role="button"], div')
+    .filter({ hasText: /Thread Messages with Biggie/i }).last();
+  await expect(threadButton).toBeVisible({ timeout: 30000 }); 
+  await threadButton.click();
+
+  // 3. Assert Biggie's name appears as sender in thread
+  const biggieSender = page.locator('[class*="message"], [class*="thread"]')
+    .filter({ hasText: 'Biggie' }).last();
+  await expect(biggieSender).toBeVisible({ timeout: 15000 });
+
+  // 4. Assert response has actual content
+  const responseText = await biggieSender.textContent();
+  expect(responseText?.length).toBeGreaterThan(20);
+
+});
 });

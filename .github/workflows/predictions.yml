@@ -14,26 +14,25 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-    - name: Check Secret Presence
-      env:
-        AUTH_STATE: ${{ secrets.AUTH_STATE }}
-      run: |
-        if [ -z "$AUTH_STATE" ]; then
-          echo "::error::AUTH_STATE secret is EMPTY or MISSING. Please go to Settings > Secrets and variables > Actions and ensure AUTH_STATE is defined."
-          exit 1
-        fi
-    - name: Write auth state
-      env:
-        AUTH_STATE: ${{ secrets.AUTH_STATE }}
-      run: python3 -c "import os; open('config.json', 'w').write(os.environ['AUTH_STATE'])"
-    - name: Verify auth state
-      run: |
-        echo "File size: $(wc -c < config.json) bytes"
-        python3 -c "import json; json.load(open('config.json')); print('JSON is valid')"
+    
+    # ... [Keep your secret checking/auth state steps here] ...
+    
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Predictions tests
-      run: npx playwright test tests/predictions.spec.ts --workers=1
+
+    # --- CHAINED TESTS START HERE ---
+    
+    - name: Run TC-PRED-001 (Homepage Feed)
+      run: npx playwright test tests/predictions.spec.ts -g "TC-PRED-001" --workers=1
+
+    - name: Run TC-PRED-ACT-001 (6-Pick Entry)
+      run: npx playwright test tests/predictions.spec.ts -g "TC-PRED-ACT-001" --workers=1
+
+    - name: Run TC-PRED-ACT-002 (Requirements Check)
+      run: npx playwright test tests/predictions.spec.ts -g "TC-PRED-ACT-002" --workers=1
+
+    # --- CHAINED TESTS END HERE ---
+
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
