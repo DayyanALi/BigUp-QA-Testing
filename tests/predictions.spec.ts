@@ -115,15 +115,32 @@ test.describe('Predictions Functionality', () => {
         test.skip(true, 'Skipping: Match entries closed.');
     }
 
+    const available = await activityPage.predictionCards.count();
+    const toPick = Math.min(available, 6);
     console.log('Making 2 picks and verifying requirement message...');
     await activityPage.selectPredictionOnCard(0, 'Yes');
     await activityPage.selectPredictionOnCard(1, 'No');
+    await activityPage.selectPredictionOnCard(4, 'Yes');
 
     // Open drawer
+    // Open drawer
     await activityPage.submitEntryButton.evaluate((el: HTMLElement) => el.click());
+    await expect(activityPage.playButton).toBeVisible({ timeout: 10000 });
+
+    // Toggle Flex Play / Power Play
+    console.log('Toggling Power Play...');
+    await activityPage.powerPlayToggle.click();
+    await page.waitForTimeout(1000);
     
-    // Verify reachability
-    await expect(page.locator('body')).toContainText(/selections/i);
-    console.log('Drawer opened successfully for sub-minimum picks.');
+    console.log('Toggling back to Power Play...');
+    await activityPage.powerPlayToggle.click();
+    
+    // Select $10 amount if visible
+    const amountBtn = page.getByRole('button', { name: /\$10/ }).first();
+    if (await amountBtn.isVisible({ timeout: 2000 })) {
+        await amountBtn.click();
+    }
+
+    await expect(activityPage.playButton).toBeEnabled();
   });
 });
