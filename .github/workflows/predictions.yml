@@ -1,41 +1,95 @@
 name: Predictions Tests
 on:
   workflow_dispatch:
+
 jobs:
-  test:
-    name: Run Sequential Tests
-    timeout-minutes: 60
+  setup:
+    name: Write Auth State
     runs-on: ubuntu-latest
     environment: AUTH_STATE
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-    - name: Install dependencies
-      run: npm ci
-    
-    # ... [Keep your secret checking/auth state steps here] ...
-    
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Check Secret Presence
+        env:
+          AUTH_STATE: ${{ secrets.AUTH_STATE }}
+        run: |
+          if [ -z "$AUTH_STATE" ]; then
+            echo "::error::AUTH_STATE secret is MISSING."
+            exit 1
+          fi
+      - name: Write auth state
+        env:
+          AUTH_STATE: ${{ secrets.AUTH_STATE }}
+        run: python3 -c "import os; open('config.json', 'w').write(os.environ['AUTH_STATE'])"
+      - name: Cache workspace
+        uses: actions/cache/save@v4
+        with:
+          path: .
+          key: workspace-${{ github.run_id }}
 
-    # --- CHAINED TESTS START HERE ---
-    
-    - name: Run TC-PRED-001 (Homepage Feed)
-      run: npx playwright test tests/predictions.spec.ts -g "TC-PRED-001" --workers=1
+  tc-pred-001:
+    name: TC-PRED-001 Homepage Feed
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: AUTH_STATE
+    steps:
+      - name: Restore workspace
+        uses: actions/cache/restore@v4
+        with:
+          path: .
+          key: workspace-${{ github.run_id }}
+      - name: Run TC-PRED-001
+        run: npx playwright test tests/predictions.spec.ts --grep "TC-PRED-001" --workers=1
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: report-tc-pred-001
+          path: playwright-report/
+          retention-days: 30
 
-    - name: Run TC-PRED-ACT-001 (6-Pick Entry)
-      run: npx playwright test tests/predictions.spec.ts -g "TC-PRED-ACT-001" --workers=1
+  tc-pred-act-001:
+    name: TC-PRED-ACT-001 6-Pick Entry
+    needs: tc-pred-001
+    runs-on: ubuntu-latest
+    environment: AUTH_STATE
+    steps:
+      - name: Restore workspace
+        uses: actions/cache/restore@v4
+        with:
+          path: .
+          key: workspace-${{ github.run_id }}
+      - name: Run TC-PRED-ACT-001
+        run: npx playwright test tests/predictions.spec.ts --grep "TC-PRED-ACT-001" --workers=1
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: report-tc-pred-act-001
+          path: playwright-report/
+          retention-days: 30
 
-    - name: Run TC-PRED-ACT-002 (Requirements Check)
-      run: npx playwright test tests/predictions.spec.ts -g "TC-PRED-ACT-002" --workers=1
-
-    # --- CHAINED TESTS END HERE ---
-
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+  tc-pred-act-002:
+    name: TC-PRED-ACT-002 Requirements Check
+    needs: tc-pred-act-001
+    runs-on: ubuntu-latest
+    environment: AUTH_STATE
+    steps:
+      - name: Restore workspace
+        uses: actions/cache/restore@v4
+        with:
+          path: .
+          key: workspace-${{ github.run_id }}
+      - name: Run TC-PRED-ACT-002
+        run: npx playwright test tests/predictions.spec.ts --grep "TC-PRED-ACT-002" --workers=1
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: report-tc-pred-act-002
+          path: playwright-report/
+          retention-days: 30
