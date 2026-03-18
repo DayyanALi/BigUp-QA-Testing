@@ -36,10 +36,10 @@ jobs:
 
     - name: Run TC-CHAT-001
       run: npx playwright test tests/chat.spec.ts -g "TC-CHAT-001" --workers=1
-    - name: Run TC-CHAT-004
-      run: npx playwright test tests/chat.spec.ts -g "TC-CHAT-004" --workers=1
-    - name: Run TC-CHAT-007
-      run: npx playwright test tests/chat.spec.ts -g "TC-CHAT-007" --workers=1
+    - name: Run TC-CHAT-002
+      run: npx playwright test tests/chat.spec.ts -g "TC-CHAT-002" --workers=1
+    - name: Run TC-CHAT-003
+      run: npx playwright test tests/chat.spec.ts -g "TC-CHAT-003" --workers=1
 
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
