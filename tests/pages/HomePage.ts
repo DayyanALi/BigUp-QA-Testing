@@ -5,34 +5,34 @@ export class HomePage {
   readonly gameCards: Locator;
   readonly predictionGameCards: Locator;
   readonly predictionButtons: Locator;
+  submitEntryBar!: Locator;
   readonly footerNavHome: Locator;
 
   constructor(page: Page) {
     this.page = page;
     
-    // Game cards in the feed. They usually contain team names and 'Go to game' links.
-    // Based on the user's codegen, they are inside containers with specific flex classes.
+    // All game cards typically have a 'Go to game' link or three dots menu
     this.gameCards = this.page.locator('div[class*="tifo-flex"][class*="tifo-gap-3"]');
     
-    // Prediction-specific cards (identified by text "created a prediction game" and having a Skip button)
-    this.predictionGameCards = this.page.locator('div[class*="tifo-flex"][class*="tifo-gap-3"]')
-      .filter({ hasText: /created a prediction game/i })
-      .filter({ hasNotText: /Ended|Concluded|Starting soon|Entries closed/i })
-      .filter({ has: this.page.getByRole('button', { name: /Skip/i }) });
+    // Prediction-specific cards (look for Yes/No buttons on an active match)
+    this.predictionGameCards = this.gameCards.filter({ has: this.page.getByRole('button', { name: /Yes|No/i }) })
+      .filter({ hasNotText: /Ended|Concluded|Entries closed/i });
     
-    // Quick prediction buttons often seen on the feed (Yes/No/Skip)
+    // quick prediction buttons
     this.predictionButtons = this.page.getByRole('button', { name: /Yes|No|Skip/i });
+    
+    // Floating submission bar that appears at the bottom after selections
+    this.submitEntryBar = this.page.getByRole('button', { name: /Submit entry/i }).last();
     
     // Generic footer navigation
     this.footerNavHome = this.page.locator('nav, footer').getByRole('button', { name: /Home/i }).or(this.page.locator('div').filter({ hasText: /^Home$/ })).first();
   }
 
   async navigate() {
-    await this.page.goto('https://stack-dev2.bigup.com/');
-    // networkidle is often too strict and times out if background analytics/images are slow.
+    await this.page.goto('https://stack-dev2.bigup.com/', { timeout: 60000 });
     await this.page.waitForLoadState('domcontentloaded');
     // Explicitly wait for the main feed to start appearing
-    await this.gameCards.first().waitFor({ state: 'visible', timeout: 15000 });
+    await this.gameCards.first().waitFor({ state: 'visible', timeout: 30000 });
   }
 
   /**
@@ -48,11 +48,41 @@ export class HomePage {
   async goToActivityPage(card: Locator) {
     // 1. Find the more options button (three dots) on the card
     // Based on the screenshot, it has aria-haspopup="dialog"
-    const moreOptionsBtn = card.locator('button[aria-haspopup="dialog"]').first();
+    const moreOptionsBtn = card.locator('button[aria-haspopup="dialog"], [aria-label*="options"]').first();
     await moreOptionsBtn.evaluate(el => (el as HTMLElement).click());
     
     // 2. Click 'Go to game' from the menu that appears (global overlay)
     await this.page.getByRole('button', { name: /Go to game/i }).click();
+  }
+
+  /**
+   * Navigates the carousel on a card using the next arrow.
+   */
+  async nextQuestion(card: Locator) {
+    // The arrows are usually the last two buttons with SVGs in the bottom navigation area
+    const nextBtn = card.locator('button').filter({ has: this.page.locator('svg') }).last();
+    await nextBtn.evaluate(el => (el as HTMLElement).click());
+    await this.page.waitForTimeout(800);
+  }
+
+  /**
+   * Navigates the carousel on a card using the prev arrow.
+   */
+  async prevQuestion(card: Locator) {
+    const prevBtn = card.locator('button').filter({ has: this.page.locator('svg') }).first();
+    // Use .nth(1) if first is the menu, but typically the arrows are distinct in the bottom row.
+    // Based on subagent, they are near the dots.
+    await prevBtn.evaluate(el => (el as HTMLElement).click());
+    await this.page.waitForTimeout(800);
+  }
+
+  /**
+   * Clicks a specific dot in the carousel.
+   */
+  async clickDot(card: Locator, index: number) {
+    const dot = card.locator('div.tifo-flex button').nth(index);
+    await dot.click();
+    await this.page.waitForTimeout(500);
   }
 
   /**

@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_case: [TC-PRED-001, TC-PRED-002, TC-PRED-003, TC-PRED-004, TC-PRED-005]
+        test_case: [TC-PRED-001, TC-PRED-ACT-001, TC-PRED-ACT-002]
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4

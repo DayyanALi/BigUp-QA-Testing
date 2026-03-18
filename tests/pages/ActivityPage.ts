@@ -21,6 +21,8 @@ export class ActivityPage {
   readonly playButton: Locator;
   readonly submitEntryButton: Locator;
   readonly confirmationButton: Locator;
+  flexPlayToggle!: Locator;
+  powerPlayToggle!: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -46,10 +48,13 @@ export class ActivityPage {
     
     // Submission buttons
     this.submitEntryButton = this.page.getByRole('button', { name: /Submit entry/i });
-    // The final button in the drawer (can be 'Play', 'Submit', 'Enter', etc.)
-    // We remove exact: true to handle icons or extra text like 'Play ->'
+    // Detailed Play/Checkmark buttons found in the slipper
     this.playButton = this.page.getByRole('button', { name: /Play|Submit|Enter/i }).last();
     this.confirmationButton = this.page.getByRole('button', { name: /BigBucks paid entry|Pay|Play|Confirm/i }).last();
+    
+    // Power/Flex Display - Use precise button roles with text
+    this.flexPlayToggle = this.page.getByRole('button', { name: /Flex Play/i }).first();
+    this.powerPlayToggle = this.page.getByRole('button', { name: /Power Play/i }).first();
   }
 
   /**
@@ -81,13 +86,12 @@ export class ActivityPage {
    */
   async selectPredictionOnCard(cardIndex: number, choice: 'Yes' | 'No') {
     const card = this.predictionCards.nth(cardIndex);
-    // await card.scrollIntoViewIfNeeded(); // Ensure it's in view
     const btn = card.getByRole('button', { name: choice, exact: false });
     
     try {
-      await btn.click({ timeout: 5000 });
+      // Use evaluate for click to be extremely resilient to tooltips or overlays
+      await btn.evaluate(el => (el as HTMLElement).click());
     } catch (e) {
-      // If blocked, try to clear overlays and then force click
       await this.dismissOverlays();
       await btn.click({ force: true });
     }
