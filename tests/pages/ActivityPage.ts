@@ -47,8 +47,8 @@ export class ActivityPage {
     // Submission buttons
     this.submitEntryButton = this.page.getByRole('button', { name: /Submit entry/i });
     // The final button in the drawer (can be 'Play', 'Submit', 'Enter', etc.)
-    // We use a broader locator because the container class (drawer/slipper/dialog) can vary by browser/viewport
-    this.playButton = this.page.getByRole('button', { name: /Play|Submit|Enter/i, exact: true }).last();
+    // We remove exact: true to handle icons or extra text like 'Play ->'
+    this.playButton = this.page.getByRole('button', { name: /Play|Submit|Enter/i }).last();
     this.confirmationButton = this.page.getByRole('button', { name: /BigBucks paid entry|Pay|Play|Confirm/i }).last();
   }
 
@@ -140,10 +140,15 @@ export class ActivityPage {
    * 2. Select amount (e.g., $6)
    * 3. Select entry type (Power Play)
    * 4. Click final 'Play'
+   * @param container Optional locator (e.g., a card) to scope the 'Submit entry' button search
    */
-  async submitPredictionFlow(amount: string = '$6') {
+  async submitPredictionFlow(amount: string = '$6', container?: Locator) {
     console.log('Clicking submit entry button via JS...');
-    await this.submitEntryButton.evaluate(el => (el as HTMLElement).click());
+    const submitBtn = container ? container.getByRole('button', { name: /Submit entry/i }) : this.submitEntryButton;
+    
+    // We use a 10s timeout here to catch issues early
+    await expect(submitBtn.first()).toBeVisible({ timeout: 10000 });
+    await submitBtn.first().evaluate(el => (el as HTMLElement).click());
     
     const errorToast = this.page.locator('div, span, p').filter({ hasText: /Entries (has )?been closed/i });
     

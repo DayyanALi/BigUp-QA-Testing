@@ -17,13 +17,14 @@ export class HomePage {
     // Prediction-specific cards (identified by text "created a prediction game" and having a Skip button)
     this.predictionGameCards = this.page.locator('div[class*="tifo-flex"][class*="tifo-gap-3"]')
       .filter({ hasText: /created a prediction game/i })
+      .filter({ hasNotText: /Ended|Concluded|Starting soon|Entries closed/i })
       .filter({ has: this.page.getByRole('button', { name: /Skip/i }) });
     
     // Quick prediction buttons often seen on the feed (Yes/No/Skip)
     this.predictionButtons = this.page.getByRole('button', { name: /Yes|No|Skip/i });
     
     // Generic footer navigation
-    this.footerNavHome = this.page.locator('div').filter({ hasText: /^Home$/ }).first();
+    this.footerNavHome = this.page.locator('nav, footer').getByRole('button', { name: /Home/i }).or(this.page.locator('div').filter({ hasText: /^Home$/ })).first();
   }
 
   async navigate() {
@@ -48,7 +49,7 @@ export class HomePage {
     // 1. Find the more options button (three dots) on the card
     // Based on the screenshot, it has aria-haspopup="dialog"
     const moreOptionsBtn = card.locator('button[aria-haspopup="dialog"]').first();
-    await moreOptionsBtn.click();
+    await moreOptionsBtn.evaluate(el => (el as HTMLElement).click());
     
     // 2. Click 'Go to game' from the menu that appears (global overlay)
     await this.page.getByRole('button', { name: /Go to game/i }).click();

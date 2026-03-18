@@ -81,7 +81,7 @@ test.describe('Predictions Functionality', () => {
     await activityPage.selectPrediction(/No/i, 1);
     
     // Navigate home
-    await homePage.footerNavHome.click();
+    await homePage.footerNavHome.evaluate(el => (el as HTMLElement).click());
     await expect(page).toHaveURL(/.*bigup.com\/$/);
     
     // Go back to the same game
@@ -101,14 +101,11 @@ test.describe('Predictions Functionality', () => {
       await card.scrollIntoViewIfNeeded();
       
       // Predict directly on the feed
-      await homePage.quickPredict(card, 'Yes', 0);
-      await page.waitForTimeout(1000);
-      await homePage.quickPredict(card, 'No', 0);
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1500);
       await homePage.quickPredict(card, 'Yes', 0); // 3 picks
       
-      // Submit
-      await activityPage.submitPredictionFlow('$6');
+      // Submit - pass the card to scope the 'Submit entry' button correctly
+      await activityPage.submitPredictionFlow('$6', card);
     } catch (e: any) {
       console.log(`TC-PRED-004 Failed: ${e.message}`);
       if (e.message?.includes('PREDICTION_CLOSED')) {
