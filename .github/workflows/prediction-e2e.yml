@@ -1,9 +1,9 @@
-name: Biggie Tests
+name: Prediction E2E Tests
 on:
   workflow_dispatch:
 jobs:
   test:
-    name: Run Sequential Tests
+    name: Run Prediction E2E Tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
     environment: AUTH_STATE
@@ -32,8 +32,8 @@ jobs:
         python3 -c "import json; json.load(open('config.json')); print('JSON is valid')"
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Biggie tests
-      run: npx playwright test tests/biggie.spec.ts --workers=1
+    - name: Run Prediction E2E tests
+      run: npx playwright test tests/prediction-e2e.spec.ts --workers=1
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
